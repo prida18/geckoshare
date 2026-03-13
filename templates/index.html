@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeckoShare | Fast File Sharing</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v=1.2">
+</head>
+<body id="dropZone">
+
+    <section class="hero">
+        <div class="logo-group">
+            <h1 class="logo">
+                <a href="/geckoshare?code={{ security_code }}" style="text-decoration:none; color:inherit;">GeckoShare</a>
+            </h1>
+            <button id="shareBtn" class="share-btn" title="Share Session">
+                <img src="/assets/qr-code.png" alt="Share" style="width: 100%; height: 100%; object-fit: contain;">
+            </button>
+        </div>
+        
+        <div class="hero-main">
+            <div class="status-left" id="connection-count">
+                Gecko Devices Connecting...
+            </div>
+            
+            <div class="gecko-box" onclick="document.getElementById('fileInput').click()">
+                <img id="geckoImage" src="/assets/gecko_mouth_notopened.png" alt="Gecko">
+                <video id="uploadAnimation" class="upload-animation" preload="auto" muted playsinline style="display: none;">
+                    <source src="/assets/animation.webm" type="video/webm">
+                </video>
+                <div class="connector-line"></div>
+            </div>
+            
+            <div class="status-right">
+                Drop your files here or click on the gecko
+            </div>
+        </div>
+
+        <div id="shareOverlay" class="share-overlay">
+            <div class="share-modal">
+                <button class="close-btn" onclick="closeShare()">×</button>
+                <h2>Connect to GeckoShare</h2>
+                <div class="qr-container">
+                    <img id="shareQr" src="/qrcode" alt="Scan to connect">
+                </div>
+                <div class="share-info">
+                    <div class="code-display">
+                        <span class="label">Security Code:</span>
+                        <span class="code-value">{{ security_code }}</span>
+                    </div>
+                    <div class="url-copy-box">
+                        <input type="text" id="shareUrl" readonly value="{{ local_url }}/geckoshare?code={{ security_code }}">
+                        <button id="copyBtn" onclick="copyLink()">Copy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="overlay-bg" onclick="closeShare()"></div>
+        </div>
+
+        <form id="uploadForm" method="POST" enctype="multipart/form-data" style="display: none;">
+            <input type="file" name="file" id="fileInput" onchange="document.getElementById('uploadForm').submit()">
+        </form>
+
+        <div class="accent-line-container"></div>
+    </section>
+
+    <section class="library" id="fileLibrary">
+        <div class="toggle-container">
+            <button class="toggle-btn active" id="btnOriginal">Full View</button>
+            <button class="toggle-btn" id="btnFixed">Square Grid</button>
+        </div>
+
+        <div class="file-grid" id="fileGrid">
+            {% if files %}
+                {% for file in files %}
+                    {% set ext = file.name.split('.')[-1].lower() %}
+                    {% set is_video = ext in ['mp4', 'mov', 'webm'] %}
+                    {% set is_image = ext in ['png', 'jpg', 'jpeg', 'gif', 'svg'] %}
+                    
+                    <a href="{{ url_for('download_file', filename=file.name) }}" 
+                       class="file-card {% if is_video %}video-card{% else %}media-card{% endif %}">
+                        
+                        <div class="file-meta">{{ file.time_ago }}</div>
+                        
+                        <button class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); window.deleteFile('{{ file.name }}')">×</button>
+
+                        <div class="card-content-wrapper">
+                            {% if is_image %}
+                                <img src="/download/{{ file.name }}" class="media-preview" loading="lazy" alt="preview">
+                            {% elif is_video %}
+                                <video class="media-preview" preload="metadata" muted loop playsinline>
+                                    <source src="/download/{{ file.name }}#t=0.5">
+                                </video>
+                            {% else %}
+                                <div class="preview-container">
+                                    <img class="file-type-icon" data-filename="{{ file.name }}" src="" alt="icon">
+                                </div>
+                            {% endif %}
+                            
+                            <div class="download-overlay">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="download-arrow">
+                                    <path d="M7 13l5 5 5-5M12 18V6"/>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="file-name" data-full-name="{{ file.name.split('.')[0] }}" data-display-name="{{ file.display_name }}">
+                            {{ file.display_name }}
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-dim);">No files shared yet. Feed the gecko!</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="/static/js/script.js?v=1.1"></script>
+</body>
+</html>
