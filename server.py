@@ -11,10 +11,11 @@ app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'geckoshare-secret-key'
 socketio = SocketIO(app)
 
-# Configure silent logging for Werkzeug to keep the console clean
+# Silence all logging to keep terminal clean
 import logging
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('socketio').setLevel(logging.ERROR)
+logging.getLogger('engineio').setLevel(logging.ERROR)
 
 UPLOAD_FOLDER = os.path.abspath("uploads")
 ASSETS_FOLDER = os.path.abspath("assets")
@@ -254,13 +255,13 @@ if __name__ == "__main__":
         print(f"="*40)
         print(f"Security Code: {SECURITY_CODE}")
         print(f"Direct Link:   {secure_url}")
-        print(f"\nScan to connect on your phone:")
-        
+        print("Scan to join on mobile:")
         qr = qrcode.QRCode(version=1, box_size=1, border=4)
         qr.add_data(secure_url)
         qr.make(fit=True)
         qr.print_ascii()
-        
+        print("="*40)
+        print("Press Ctrl + C to close the app")
         print("="*40 + "\n")
     
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, log_output=False)
