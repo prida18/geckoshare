@@ -206,12 +206,17 @@ def delete_file(filename):
 
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     if os.path.exists(filepath):
-        try:
-            os.remove(filepath)
-            socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
-            return {"status": "success"}, 200
-        except PermissionError:
-            return {"status": "error", "message": "File is currently in use. Please try again in 1-2 seconds."}, 423
+        # Try to delete up to 3 times (handles Windows file locking)
+        for attempt in range(3):
+            try:
+                os.remove(filepath)
+                socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
+                return {"status": "success"}, 200
+            except PermissionError:
+                if attempt < 2:
+                    time.sleep(0.5)
+                else:
+                    return {"status": "error", "message": "File is currently in use. Please try again in a moment."}, 423
     return {"status": "error", "message": "File not found"}, 404
 
 def get_display_name(filename):
