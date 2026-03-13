@@ -251,9 +251,27 @@ body {
 .status-left,
 .status-right {
     flex: 1;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: var(--text-dim);
     padding: 0 2rem;
+}
+
+.upload-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text);
+    animation: fadeIn 0.3s ease;
+    text-align: center;
+}
+
+.upload-stats b {
+    font-size: 1.2rem;
+    color: #000000;
+}
+
+#dropPrompt {
+    transition: opacity 0.3s ease;
 }
 
 .status-left {

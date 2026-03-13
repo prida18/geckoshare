@@ -87,6 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!file) return;
 
         const connector = document.querySelector('.connector-line');
+        const statsEl = document.getElementById('uploadStats');
+        const promptEl = document.getElementById('dropPrompt');
+        const speedEl = document.getElementById('uploadSpeed');
+        const progressEl = document.getElementById('uploadProgress');
+
         if (connector) {
             connector.style.display = 'block';
             connector.classList.add('uploading');
@@ -104,29 +109,52 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
+        // Show stats, hide prompt
+        if (statsEl) statsEl.style.display = 'flex';
+        if (promptEl) promptEl.style.display = 'none';
+
         const formData = new FormData();
         formData.append('file', file);
 
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         
-        fetch(`/geckoshare?code=${code}`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                alert('Upload failed');
-                resetUI();
+        const xhr = new XMLHttpRequest();
+        let startTime = Date.now();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const now = Date.now();
+                const duration = (now - startTime) / 1000;
+                if (duration > 0) {
+                    const speed = e.loaded / duration;
+                    if (speedEl) speedEl.innerHTML = `<b>${formatSize(speed)}/s</b>`;
+                }
+                if (progressEl) progressEl.innerHTML = `<b>${formatSize(e.loaded)} / ${formatSize(e.total)}</b>`;
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Upload error');
-            resetUI();
         });
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    window.location.reload();
+                } else {
+                    alert('Upload failed');
+                    resetUI();
+                }
+            }
+        };
+
+        xhr.open('POST', `/geckoshare?code=${code}`, true);
+        xhr.send(formData);
+    }
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
     function resetUI() {
@@ -136,6 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (geckoImage) geckoImage.style.display = 'block';
         
+        const statsEl = document.getElementById('uploadStats');
+        const promptEl = document.getElementById('dropPrompt');
+        if (statsEl) statsEl.style.display = 'none';
+        if (promptEl) promptEl.style.display = 'block';
+
         const connector = document.querySelector('.connector-line');
         if (connector) connector.classList.remove('uploading');
     }

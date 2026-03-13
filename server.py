@@ -9,13 +9,11 @@ import random
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'geckoshare-secret-key'
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='threading')
 
-# Silence all logging to keep terminal clean
+# Configure silent logging for Werkzeug
 import logging
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('socketio').setLevel(logging.ERROR)
-logging.getLogger('engineio').setLevel(logging.ERROR)
 
 UPLOAD_FOLDER = os.path.abspath("uploads")
 ASSETS_FOLDER = os.path.abspath("assets")
@@ -208,9 +206,12 @@ def delete_file(filename):
 
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     if os.path.exists(filepath):
-        os.remove(filepath)
-        socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
-        return {"status": "success"}, 200
+        try:
+            os.remove(filepath)
+            socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
+            return {"status": "success"}, 200
+        except PermissionError:
+            return {"status": "error", "message": "File is currently in use. Please try again in 1-2 seconds."}, 423
     return {"status": "error", "message": "File not found"}, 404
 
 def get_display_name(filename):
@@ -255,13 +256,13 @@ if __name__ == "__main__":
         print(f"="*40)
         print(f"Security Code: {SECURITY_CODE}")
         print(f"Direct Link:   {secure_url}")
-        print("Scan to join on mobile:")
+        print(f"\nScan to connect on your phone:")
+        
         qr = qrcode.QRCode(version=1, box_size=1, border=4)
         qr.add_data(secure_url)
         qr.make(fit=True)
         qr.print_ascii()
-        print("="*40)
-        print("Press Ctrl + C to close the app")
+        
         print("="*40 + "\n")
     
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True, log_output=False)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
