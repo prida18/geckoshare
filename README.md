@@ -1,4 +1,4 @@
-# 🦎 GeckoShare
+# <img src="assets/logo.png" width="48" align="center"> GeckoShare
 
 GeckoShare is a fast, fun, and secure peer-to-peer file sharing tool that works over your local network. No internet required, no cables needed—just feed the Gecko!
 
