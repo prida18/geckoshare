@@ -12,3 +12,7 @@ uploads/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+server_log.txt
+server_log_v2.txt
