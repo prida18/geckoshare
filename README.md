@@ -20,7 +20,7 @@ You'll need Python 3.7+ installed on your machine.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/geckoshare.git
+   git clone https://github.com/prida18/geckoshare.git
    cd geckoshare
    ```
 
