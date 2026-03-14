@@ -15,6 +15,7 @@ GeckoShare is a fast, fun, and secure peer-to-peer file sharing tool that works 
 
 ### Prerequisites
 You'll need Python 3.7+ installed on your machine.
+Open CMD to install this setup. And if you want to close this setup press - "Ctrl + C"
 
 ### Installation
 
