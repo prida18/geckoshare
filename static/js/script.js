@@ -82,6 +82,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const uploadAnimation = document.getElementById('uploadAnimation');
+    let currentXhr = null;
+
+    if (document.getElementById('cancelUploadBtn')) {
+        document.getElementById('cancelUploadBtn').addEventListener('click', () => {
+            if (currentXhr) {
+                currentXhr.abort();
+                currentXhr = null;
+                resetUI();
+            }
+        });
+    }
 
     function handleUpload(file) {
         if (!file) return;
@@ -119,10 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         
-        const xhr = new XMLHttpRequest();
+        currentXhr = new XMLHttpRequest();
         let startTime = Date.now();
 
-        xhr.upload.addEventListener('progress', (e) => {
+        currentXhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
                 const now = Date.now();
                 const duration = (now - startTime) / 1000;
@@ -134,19 +145,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
+        currentXhr.onreadystatechange = () => {
+            if (currentXhr.readyState === 4) {
+                if (currentXhr.status === 200) {
                     window.location.reload();
-                } else {
+                } else if (currentXhr.status !== 0) { // Status 0 means aborted
                     alert('Upload failed');
                     resetUI();
                 }
             }
         };
 
-        xhr.open('POST', `/geckoshare?code=${code}`, true);
-        xhr.send(formData);
+        currentXhr.open('POST', `/geckoshare?code=${code}`, true);
+        currentXhr.send(formData);
     }
 
     function formatSize(bytes) {

@@ -60,7 +60,7 @@ def handle_register(data):
 @socketio.on('disconnect')
 def handle_disconnect():
     if request.sid in connected_devices:
-        del connected_devices[request.sid]
+        connected_devices.pop(request.sid, None)
         broadcast_unique_count()
 
 @socketio.on('request_count')
@@ -206,17 +206,9 @@ def delete_file(filename):
 
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     if os.path.exists(filepath):
-        # Try to delete up to 3 times (handles Windows file locking)
-        for attempt in range(3):
-            try:
-                os.remove(filepath)
-                socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
-                return {"status": "success"}, 200
-            except PermissionError:
-                if attempt < 2:
-                    time.sleep(0.5)
-                else:
-                    return {"status": "error", "message": "File is currently in use. Please try again in a moment."}, 423
+        os.remove(filepath)
+        socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
+        return {"status": "success"}, 200
     return {"status": "error", "message": "File not found"}, 404
 
 def get_display_name(filename):
