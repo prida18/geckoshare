@@ -293,6 +293,7 @@ body {
 
 #dropPrompt {
     transition: opacity 0.3s ease;
+    margin-top: 10px;
 }
 
 .status-left {
@@ -707,3 +708,158 @@ body {
         font-size: 0.9rem;
     }
 }
+/* Text Card Styles */
+.text-card .card-content-wrapper {
+    background: #fff;
+    aspect-ratio: 1/1;
+    display: flex;
+    flex-direction: column;
+}
+
+.text-preview-container {
+    width: 100%;
+    height: 100%;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    background: #fdfdfd;
+}
+
+.text-preview-content {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'Inter', sans-serif;
+}
+
+.copy-text-btn {
+    align-self: flex-end;
+    background: var(--bg-accent);
+    color: var(--text);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    margin-top: 1rem;
+    z-index: 5;
+}
+
+.copy-text-btn:hover {
+    background: var(--accent);
+    transform: translateY(-2px);
+}
+
+.text-card.is-landscape .card-content-wrapper,
+.text-card.is-portrait .card-content-wrapper {
+    aspect-ratio: auto;
+    min-height: 250px;
+}
+
+.file-grid.is-fixed .text-preview-content {
+    -webkit-line-clamp: 4;
+}
+
+/* Text Input UI */
+.text-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+#mobileTextInput {
+    width: 100%;
+    height: 100px;
+    padding: 1rem;
+    border: 2px solid var(--bg-accent);
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+    resize: none;
+    transition: border-color 0.3s ease;
+}
+
+#mobileTextInput:focus {
+    border-color: var(--accent);
+}
+
+.send-btn {
+    background: var(--text);
+    color: #fff;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 15px;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.send-btn:hover {
+    background: var(--accent);
+    color: var(--text);
+    transform: scale(1.02);
+}
+
+.send-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Ellipsis Truncation Hack */
+.text-preview-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Adaptive Visibility */
+.mobile-only {
+    display: none !important;
+}
+
+.pc-only {
+    display: inline !important;
+}
+
+@media (max-width: 900px) {
+    .mobile-only {
+        display: flex !important;
+    }
+    span.mobile-only {
+        display: inline !important;
+    }
+    .pc-only {
+        display: none !important;
+    }
+    .text-input-group.mobile-only {
+        display: flex !important;
+    }
+}
+

@@ -43,7 +43,20 @@
                     <div class="stat-progress" id="uploadProgress"><b>0 MB / 0 MB</b></div>
                     <button id="cancelUploadBtn" class="cancel-btn">Cancel Transfer</button>
                 </div>
-                <div id="dropPrompt">Drop your files here or click on the gecko</div>
+                <div class="text-input-group mobile-only" id="textInputGroup">
+                    <textarea id="mobileTextInput" placeholder="Type or paste text to share..."></textarea>
+                    <button id="sendTextBtn" class="send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                        Send
+                    </button>
+                </div>
+                <div id="dropPrompt" class="prompt-container">
+                    <span class="pc-only">Drop your files here or click on the gecko. Press Ctrl + V to paste any copied text</span>
+                    <span class="mobile-only">Click on the gecko and use the text box to send any text</span>
+                </div>
             </div>
         </div>
 
@@ -87,9 +100,10 @@
                     {% set ext = file.name.split('.')[-1].lower() %}
                     {% set is_video = ext in ['mp4', 'mov', 'webm'] %}
                     {% set is_image = ext in ['png', 'jpg', 'jpeg', 'gif', 'svg'] %}
+                    {% set is_text = ext == 'txt' %}
                     
                     <a href="{{ url_for('download_file', filename=file.name) }}" 
-                       class="file-card {% if is_video %}video-card{% else %}media-card{% endif %}">
+                       class="file-card {% if is_video %}video-card{% elif is_text %}text-card{% else %}media-card{% endif %}">
                         
                         <div class="file-meta">{{ file.time_ago }}</div>
                         
@@ -102,17 +116,30 @@
                                 <video class="media-preview" preload="metadata" muted loop playsinline>
                                     <source src="/download/{{ file.name }}#t=0.5">
                                 </video>
+                            {% elif is_text %}
+                                <div class="text-preview-container" data-full-text="{{ file.full_text }}">
+                                    <div class="text-preview-content">{{ file.text_preview }}{% if file.full_text|length > 200 %}...{% endif %}</div>
+                                    <button class="copy-text-btn" onclick="event.preventDefault(); event.stopPropagation(); window.copyTextFromElement(this)" title="Copy Content">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                        Copy
+                                    </button>
+                                </div>
                             {% else %}
                                 <div class="preview-container">
                                     <img class="file-type-icon" data-filename="{{ file.name }}" src="" alt="icon">
                                 </div>
                             {% endif %}
                             
-                            <div class="download-overlay">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="download-arrow">
-                                    <path d="M7 13l5 5 5-5M12 18V6"/>
-                                </svg>
-                            </div>
+                            {% if is_image or is_video %}
+                                <div class="download-overlay">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="download-arrow">
+                                        <path d="M7 13l5 5 5-5M12 18V6"/>
+                                    </svg>
+                                </div>
+                            {% endif %}
                         </div>
                         
                         <div class="file-name" data-full-name="{{ file.name.split('.')[0] }}" data-display-name="{{ file.display_name }}">

@@ -84,24 +84,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadAnimation = document.getElementById('uploadAnimation');
     let currentXhr = null;
 
-    if (document.getElementById('cancelUploadBtn')) {
-        document.getElementById('cancelUploadBtn').addEventListener('click', () => {
-            if (currentXhr) {
-                currentXhr.abort();
-                currentXhr = null;
-                resetUI();
-            }
-        });
-    }
+    // We'll manage the cancel listener inside handleUpload for specific context
 
     function handleUpload(file) {
         if (!file) return;
+
+        // Dynamic cancel listener with file context for cleanup
+        const cancelBtn = document.getElementById('cancelUploadBtn');
+        if (cancelBtn) {
+            // Remove old listener and add fresh one for this specific file
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            newCancelBtn.addEventListener('click', () => {
+                if (currentXhr) {
+                    currentXhr.abort();
+                    // Immediate refresh as requested
+                    window.location.reload();
+                }
+            });
+        }
 
         const connector = document.querySelector('.connector-line');
         const statsEl = document.getElementById('uploadStats');
         const promptEl = document.getElementById('dropPrompt');
         const speedEl = document.getElementById('uploadSpeed');
         const progressEl = document.getElementById('uploadProgress');
+        const textInputGroup = document.getElementById('textInputGroup');
+
+        if (textInputGroup) textInputGroup.style.setProperty('display', 'none', 'important');
 
         if (connector) {
             connector.style.display = 'block';
@@ -180,12 +190,48 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statsEl) statsEl.style.display = 'none';
         if (promptEl) promptEl.style.display = 'block';
 
+        const textInputGroup = document.getElementById('textInputGroup');
+        if (textInputGroup) textInputGroup.style.setProperty('display', 'flex', 'important');
+
         const connector = document.querySelector('.connector-line');
-        if (connector) connector.classList.remove('uploading');
+        if (connector) {
+            connector.classList.remove('uploading');
+            connector.style.display = 'none'; // Ensure it's hidden
+        }
     }
 
     socket.on('file_uploaded', function(data) {
-        window.location.reload();
+        if (data.action === 'delete') {
+            // Find and remove the specific file card
+            const cards = document.querySelectorAll('.file-card');
+            cards.forEach(card => {
+                const deleteBtn = card.querySelector('.delete-btn');
+                // Check if onclick contains the filename
+                if (deleteBtn && deleteBtn.getAttribute('onclick').includes("'" + data.filename + "'")) {
+                    // Stop media before removal
+                    const media = card.querySelector('.media-preview');
+                    if (media) {
+                        if (media.tagName === 'VIDEO') {
+                            media.pause();
+                            media.src = "";
+                            media.load();
+                        }
+                    }
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if grid is empty after removal
+                        const grid = document.getElementById('fileGrid');
+                        if (grid && grid.querySelectorAll('.file-card').length === 0) {
+                            grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-dim);">No files shared yet. Feed the gecko!</p>';
+                        }
+                    }, 300);
+                }
+            });
+        } else {
+            window.location.reload();
+        }
     });
 
     function getIcon(filename) {
@@ -370,6 +416,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareBtn) shareBtn.addEventListener('click', toggleShare);
 
+    const sendTextBtn = document.getElementById('sendTextBtn');
+    const mobileTextInput = document.getElementById('mobileTextInput');
+
+    if (sendTextBtn && mobileTextInput) {
+        sendTextBtn.addEventListener('click', () => {
+            const text = mobileTextInput.value.trim();
+            if (text) {
+                handleTextPaste(text);
+                mobileTextInput.value = '';
+            }
+        });
+
+        // Allow Ctrl+Enter to send
+        mobileTextInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                sendTextBtn.click();
+            }
+        });
+    }
+
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (!isMobile && !sessionStorage.getItem('shareOpened')) {
         setTimeout(toggleShare, 1000);
@@ -378,22 +444,161 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.deleteFile = function(filename) {
         if (confirm(`Delete ${filename}?`)) {
+            // UI-First Deletion: Find the card and remove it immediately
+            const cards = document.querySelectorAll('.file-card');
+            let targetCard = null;
+            
+            cards.forEach(card => {
+                const deleteBtn = card.querySelector('.delete-btn');
+                if (deleteBtn && deleteBtn.getAttribute('onclick').includes("'" + filename + "'")) {
+                    targetCard = card;
+                }
+            });
+
+            if (targetCard) {
+                // 1. Release file handles (crucial for Windows)
+                const media = targetCard.querySelector('.media-preview');
+                if (media) {
+                    if (media.tagName === 'VIDEO') {
+                        media.pause();
+                        media.src = ""; // Clear source to release lock
+                        media.load();
+                    }
+                }
+                
+                // 2. Animate and remove from UI
+                targetCard.style.opacity = '0';
+                targetCard.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    targetCard.remove();
+                    // Show empty message if last file
+                    const grid = document.getElementById('fileGrid');
+                    if (grid && grid.querySelectorAll('.file-card').length === 0) {
+                        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-dim);">No files shared yet. Feed the gecko!</p>';
+                    }
+                }, 300);
+            }
+
+            // 3. Request server to delete
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             fetch(`/delete/${encodeURIComponent(filename)}?code=${code}`, {
                 method: 'POST'
             })
             .then(response => {
-                if (response.ok) {
-                    // socket will handle reload
-                } else {
-                    alert('Delete failed');
+                if (!response.ok) {
+                    console.error('Server deletion failed');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Delete error');
+                console.error('Delete error:', error);
             });
         }
     };
+
+    // Paste handling
+    window.addEventListener('paste', (e) => {
+        // Don't trigger if user is typing in an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (text) {
+            handleTextPaste(text);
+        }
+    });
+
+    function handleTextPaste(text) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        // Trigger Gecko mouth animation
+        if (geckoImage) geckoImage.src = IMAGE_OPENED;
+        const connector = document.querySelector('.connector-line');
+        if (connector) {
+            connector.style.display = 'block';
+            connector.classList.add('uploading');
+        }
+
+        fetch(`/paste?code=${code}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: text })
+        })
+        .then(response => {
+            if (response.ok) {
+                // Socket will handle reload
+            } else {
+                alert('Paste failed');
+                resetUI();
+            }
+        })
+        .catch(err => {
+            console.error('Paste error:', err);
+            resetUI();
+        });
+    }
+
+    window.copyTextFromElement = function(btn) {
+        const container = btn.closest('.text-preview-container');
+        const text = container.getAttribute('data-full-text');
+        
+        if (!text) {
+            alert('No text content found');
+            return;
+        }
+
+        const notifySuccess = () => {
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Copied!
+            `;
+            btn.style.background = '#E2FF76';
+            btn.style.color = '#222';
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.style.background = '';
+                btn.style.color = '';
+            }, 2000);
+        };
+
+        // Modern Clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text)
+                .then(notifySuccess)
+                .catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopy(text, notifySuccess);
+                });
+        } else {
+            fallbackCopy(text, notifySuccess);
+        }
+    };
+
+    function fallbackCopy(text, successCallback) {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                successCallback();
+            } else {
+                alert('Could not copy text (fallback failed)');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            alert('Could not copy text');
+        }
+    }
 });

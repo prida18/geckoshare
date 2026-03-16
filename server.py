@@ -170,11 +170,25 @@ def geckoshare():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         if os.path.isfile(filepath):
             mtime = os.path.getmtime(filepath)
+            
+            text_preview = None
+            full_text = None
+            if filename.endswith('.txt'):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        full_content = f.read()
+                        text_preview = full_content[:200] # Get first 200 chars
+                        full_text = full_content
+                except:
+                    text_preview = "Error reading text content"
+
             files_info.append({
                 'name': filename,
                 'display_name': get_display_name(filename),
                 'mtime': mtime,
-                'time_ago': format_time_ago(mtime)
+                'time_ago': format_time_ago(mtime),
+                'text_preview': text_preview,
+                'full_text': full_text
             })
     
     files_info.sort(key=lambda x: x['mtime'], reverse=True)
@@ -182,6 +196,37 @@ def geckoshare():
     ip = get_local_ip()
     local_url = f"http://{ip}:5000"
     return render_template("index.html", files=files_info, local_url=local_url, security_code=SECURITY_CODE)
+
+@app.route("/paste", methods=["POST"])
+def paste_text():
+    code = request.args.get('code')
+    if code != SECURITY_CODE:
+        return {"status": "error", "message": "Unauthorized"}, 401
+    
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return {"status": "error", "message": "No text provided"}, 400
+    
+    text_content = data['text']
+    timestamp = int(time.time())
+    filename = f"pasted_text_{timestamp}.txt"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(text_content)
+    
+    socketio.emit('file_uploaded', {'filename': filename})
+    return {"status": "success", "filename": filename}, 200
+
+@app.route("/get_text/<filename>")
+def get_text_content(filename):
+    if not filename.endswith('.txt'):
+        return "Invalid file type", 400
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return f.read()
+    return "File not found", 404
 
 def format_time_ago(mtime):
     diff = time.time() - mtime
@@ -206,9 +251,28 @@ def delete_file(filename):
 
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     if os.path.exists(filepath):
-        os.remove(filepath)
+        # Broadcast deletion first so clients can release handles
         socketio.emit('file_uploaded', {'action': 'delete', 'filename': filename})
-        return {"status": "success"}, 200
+        
+        # Give clients a moment to process the UI removal and close file handles
+        time.sleep(0.5)
+        
+        try:
+            os.remove(filepath)
+            return {"status": "success"}, 200
+        except PermissionError:
+            # Small retry loop for stubborn handles
+            for _ in range(3):
+                time.sleep(0.5)
+                try:
+                    os.remove(filepath)
+                    return {"status": "success"}, 200
+                except PermissionError:
+                    continue
+            return {"status": "error", "message": "File is being used by another process"}, 500
+        except Exception as e:
+            return {"status": "error", "message": str(e)}, 500
+            
     return {"status": "error", "message": "File not found"}, 404
 
 def get_display_name(filename):
