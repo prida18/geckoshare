@@ -4,7 +4,7 @@ GeckoShare is a fast, fun, and secure peer-to-peer file sharing tool that works 
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## 📺 Video Demo & Installation
+## 📺 Video Demo & Installation[Click on the image to play]
 [![GeckoShare Demo](https://img.youtube.com/vi/Ji_QCde46T4/0.jpg)](https://www.youtube.com/watch?v=Ji_QCde46T4)
 
 ## ✨ Features
